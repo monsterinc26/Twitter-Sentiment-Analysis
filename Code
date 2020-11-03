@@ -1,0 +1,53 @@
+import pandas as pd
+import numpy as np
+from sklearn.model_selection import train_test_split
+from sklearn.metrics import confusion_matrix,accuracy_score,f1_score
+from sklearn.feature_extraction.text import CountVectorizer
+import nltk
+from nltk.stem import PorterStemmer
+from nltk.corpus import stopwords
+import re
+
+df=pd.read_csv('D:/python/Deep Learning/Data sets/twitter.csv',encoding='latin1')
+df.columns=['sentiment','id','date','query','special','text']
+df.isnull().sum() #no null values
+df.drop(['id','date','query','special'],axis=1,inplace=True)
+
+df['text']=df['text'].str.replace('@',"")
+df['text']=df['text'].str.replace('[^a-zA-Z]'," ")
+df['text']=df['text'].str.replace('http\S+',"")
+
+df['text']=df['text'].str.lower()
+#df.drop('Cleaned',axis=1,inplace=True)
+
+
+ps=PorterStemmer()
+stopwords=stopwords.words('english')
+# corpus=[] #very slow
+# for i in range(len(df['text'])):
+#     print(i)
+#     review=[ps.stem(word) for word in df['text'][i] if word not in stopwords.words('english')]
+#     review= " ".join(review)
+#     corpus.append(review)
+
+def cleantext(text):
+    clean=" ".join([word for word in text.split() if word not in stopwords])
+    return clean
+
+df['text']=df['text'].apply(lambda x:cleantext(x.lower()))
+
+
+df['text']=df['text'].apply(lambda x:[ps.stem(i) for i in x]) #returns a list
+df['text']=df['text'].apply(lambda x: "".join(i for i in x))
+
+cv=CountVectorizer(max_features=1000)
+x=cv.fit_transform(df['text']).toarray()
+y=df['sentiment']
+
+xtrain,xtest=x[0:156799],x[156799:159999]
+ytrain,ytest=np.array(y[0:156799]),np.array(y[156799:159999])
+from sklearn.ensemble import RandomForestClassifier
+clf=RandomForestClassifier()
+clf.fit(xtrain,ytrain)
+pred=clf.predict(xtest)
+ac=accuracy_score(ytest,pred)
